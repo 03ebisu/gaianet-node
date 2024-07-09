@@ -3,11 +3,12 @@
 set -e
 
 # version of CLI tool
-version="0.1.2"
+# Note that the version should kept same as the version of installer
+version="0.2.1"
 
 # version of the GaiaNet node
 # Note that the version should kept same as the version of installer
-installer_version="0.1.2"
+installer_version="0.2.1"
 
 # path to the default gaianet base directory. It could be changed by the --base option
 gaianet_base_dir="$HOME/gaianet"
@@ -533,6 +534,10 @@ init() {
     $sed_i_cmd "s/name = \".*\"/name = \"$address.$domain\"/g" $gaianet_base_dir/gaianet-domain/frpc.toml
     $sed_i_cmd "s/localPort = \".*\"/localPort = \"$llamaedge_port\"/g" $gaianet_base_dir/gaianet-domain/frpc.toml
     $sed_i_cmd "s/serverAddr = \".*\"/serverAddr = \"$domain\"/g" $gaianet_base_dir/gaianet-domain/frpc.toml
+
+    # Remove all files in the directory except for frpc and frpc.toml
+    find $gaianet_base_dir/gaianet-domain -type f -not -name 'frpc' -not -name 'frpc.toml' -exec rm -f {} \;
+
     printf "\n"
 
     printf "[+] COMPLETED! GaiaNet node is initialized successfully.\n\n"
@@ -640,6 +645,11 @@ start() {
 
         # parse context size for chat model
         chat_ctx_size=$(awk -F'"' '/"chat_ctx_size":/ {print $4}' config.json)
+        # parse batch size for chat model
+        chat_batch_size=$(awk -F'"' '/"chat_batch_size":/ {print $4}' config.json)
+        if [ -z "$chat_batch_size" ]; then
+            chat_batch_size=$chat_ctx_size
+        fi
         # parse prompt type for chat model
         prompt_type=$(awk -F'"' '/"prompt_template":/ {print $4}' config.json)
         # parse system prompt for chat model
@@ -671,6 +681,11 @@ start() {
         fi
         # parse context size for embedding model
         embedding_ctx_size=$(awk -F'"' '/"embedding_ctx_size":/ {print $4}' config.json)
+        # parse batch size for embedding model
+        embedding_batch_size=$(awk -F'"' '/"embedding_batch_size":/ {print $4}' config.json)
+        if [ -z "$embedding_batch_size" ]; then
+            embedding_batch_size=$embedding_ctx_size
+        fi
         # parse port for LlamaEdge API Server
         llamaedge_port=$(awk -F'"' '/"llamaedge_port":/ {print $4}' config.json)
         # parse qdrant limit
@@ -721,7 +736,7 @@ start() {
         rag-api-server.wasm \
         --model-name $chat_model_stem,$embedding_model_stem \
         --ctx-size $chat_ctx_size,$embedding_ctx_size \
-        --batch-size $chat_ctx_size,$embedding_ctx_size \
+        --batch-size $chat_batch_size,$embedding_batch_size \
         --prompt-template $prompt_type,embedding \
         --rag-policy $rag_policy \
         --qdrant-collection-name $embedding_collection_name \
@@ -900,6 +915,11 @@ start() {
 
         # parse context size for chat model
         chat_ctx_size=$(awk -F'"' '/"chat_ctx_size":/ {print $4}' config.json)
+        # parse batch size for chat model
+        chat_batch_size=$(awk -F'"' '/"chat_batch_size":/ {print $4}' config.json)
+        if [ -z "$chat_batch_size" ]; then
+            chat_batch_size=$chat_ctx_size
+        fi
         # parse prompt type for chat model
         prompt_type=$(awk -F'"' '/"prompt_template":/ {print $4}' config.json)
         # parse reverse prompt for chat model
@@ -923,6 +943,11 @@ start() {
         fi
         # parse context size for embedding model
         embedding_ctx_size=$(awk -F'"' '/"embedding_ctx_size":/ {print $4}' config.json)
+        # parse batch size for embedding model
+        embedding_batch_size=$(awk -F'"' '/"embedding_batch_size":/ {print $4}' config.json)
+        if [ -z "$embedding_batch_size" ]; then
+            embedding_batch_size=$embedding_ctx_size
+        fi
         # parse port for LlamaEdge API Server
         llamaedge_port=$(awk -F'"' '/"llamaedge_port":/ {print $4}' config.json)
         # check port
@@ -955,7 +980,7 @@ start() {
         llama-api-server.wasm \
         --model-name $chat_model_stem,$embedding_model_stem \
         --ctx-size $chat_ctx_size,$embedding_ctx_size \
-        --batch-size $chat_ctx_size,$embedding_ctx_size \
+        --batch-size $chat_batch_size,$embedding_batch_size \
         --prompt-template $prompt_type,embedding \
         --web-ui ./ \
         --socket-addr 0.0.0.0:$llamaedge_port)
